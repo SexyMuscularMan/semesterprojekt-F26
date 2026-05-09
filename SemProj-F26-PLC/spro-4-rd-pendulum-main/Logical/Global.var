@@ -1,0 +1,24 @@
+VAR
+	SI_estop_B : BOOL;
+	SI_estop_A : BOOL;
+	SI_reset_btn : BOOL;
+	I_drive_active : BOOL;
+	I_drive_no_fault : BOOL;
+	I_endstop_negative : BOOL;
+	I_endstop_positive : BOOL;
+	I_pos_cart : DINT;
+	I_pos_pendulum : DINT;
+	Q_drive_enable : BOOL;
+	Q_drive_faultreset : BOOL;
+	Q_drive_operating_mode : BOOL;
+	Q_vel_cart : INT;
+	Q_reset_LED : BOOL;
+	reset_cart_position : BOOL;
+	reset_pendulum_position : BOOL;
+	A : ARRAY[0..3,0..3] OF REAL := [1.0,0.009535,0.0000575,0.0000002737,0.0,0.9085,-0.01132,0.00003438,0.0,0.001945,1.002,0.009989,0.0,0.3829,0.4582,0.9986];
+	B : ARRAY[0..3] OF REAL := [0.001859,0.366,-0.007782,-1.531];
+	K : ARRAY[0..3] OF REAL := [-9.97788845498053,-4.33797239803683,-8.31962221505295,-1.27391028745717];
+	u : REAL;
+	x : ARRAY[0..3] OF REAL;
+	x_out : ARRAY[0..3] OF REAL;
+END_VAR

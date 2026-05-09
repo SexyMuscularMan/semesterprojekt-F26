@@ -1,0 +1,36 @@
+VAR CONSTANT
+	Pi : REAL := 3.1415926535;
+END_VAR
+VAR
+	temp_pendulum_pos : DINT;
+	Temp_checker : REAL;
+	length : DINT;
+	led_ton : TON;
+	cart_velocity : INT;
+	SI_reset_last : BOOL;
+	allow_Q_drive_enable : BOOL;
+	length_calibration_steps : USINT;
+	calibration_finished : BOOL;
+	centering_in_progress : BOOL;
+	pos_pendulum_absolute : DINT;
+	pos_pendulum_deg : REAL;
+	pos_pendulum_rad : REAL;
+	pendulum_position_rad_last : REAL;
+	pendulum_velocity_rad : REAL;
+	cart_position_last : REAL;
+	pend_vel_b : REAL;
+	pend_vel_a : REAL;
+	i : INT;
+	j : INT;
+	stop_acc : DINT;
+	cart_velocity_calculated : REAL;
+	pos_cart_mm : DINT;
+	target_position : DINT;
+	new_cart_velocity : INT;
+	stopped : BOOL;
+	balancing_active : BOOL;
+	length_mm : DINT;
+	swingup_complete : BOOL;
+	Swing_movement : Position_case;
+	pos_cart : DINT;
+END_VAR
