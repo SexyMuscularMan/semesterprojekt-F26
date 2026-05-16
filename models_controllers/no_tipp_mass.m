@@ -76,7 +76,7 @@ function stateDerivatives = nonLinearModel(t, state, torque, p)
 
     % Parameters with shorter variable names to simplify
     m_c  = p.cartMass;
-    m_p = p.pendulumMass;
+    m_p = p.rodMass;
     l_com  = p.centerOfMass;
     g  = p.gravity;
     b_c = p.LinearDampingCoefficient;
@@ -111,7 +111,7 @@ function stateSpaceModel = linearModel(p)
     
     % Parameters with shorter variable names to simplify
     m_c  = p.cartMass;
-    m_p = p.pendulumMass;
+    m_p = p.rodMass;
     l_com  = p.centerOfMass;
     g  = p.gravity;
     b_c = p.LinearDampingCoefficient;
