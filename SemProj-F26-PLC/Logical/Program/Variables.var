@@ -33,4 +33,11 @@ VAR
 	swingup_complete : BOOL;
 	Swing_movement : Position_case;
 	pos_cart : DINT;
+	eOut : ARRAY[0..2] OF REAL;
+	eIn : ARRAY[0..2] OF REAL;
+	uIn : ARRAY[0..2] OF REAL;
+	uSmoothingConst : REAL;
+	xSmoothingConst : REAL;
+	thetaSmoothingConst : REAL;
+	uOut : ARRAY[0..2] OF REAL;
 END_VAR

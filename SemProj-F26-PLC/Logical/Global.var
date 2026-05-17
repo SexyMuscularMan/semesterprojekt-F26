@@ -21,4 +21,9 @@ VAR
 	u : REAL;
 	x : ARRAY[0..3] OF REAL;
 	x_out : ARRAY[0..3] OF REAL;
+	theta_smoothed : REAL;
+	x_smoothed : REAL;
+	theta_last : REAL;
+	u_smoothed : REAL;
+	u_last : REAL;
 END_VAR
