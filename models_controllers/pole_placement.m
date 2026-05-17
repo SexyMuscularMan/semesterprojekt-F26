@@ -7,12 +7,6 @@ function pole_placement_results = pole_placement(discreteStateSpace)
     D = discreteStateSpace.D; % D matrix
     Ts = discreteStateSpace.Ts; % Sample time
     n = size(A, 1); % Number of states
-    
-    %% Checking controllability of the discrete state space
-    controlMatrix = ctrb(A, B); % Controllability matrix (rank must be n for system to be controllable)
-    if rank(controlMatrix) ~= n
-        error("System is not controllable.");
-    end
 
     %% Defining the poles and calculating the state feedback gain 
     poles = [0.95, 0.9, 0.85, 0.8];
@@ -32,8 +26,9 @@ function pole_placement_results = pole_placement(discreteStateSpace)
         noise_standart = [0.001; 0.001; 0.001; 0.001]; % units: [m; m; rad; rad]
         noise_gaussian = noise_standart .* randn(4,1); % Gaussian distribution of noise
         noisy_x = x(:,k) + noise_gaussian; % Adding noise to measured states
-        % difference equations
-        u(k) = -K * noisy_x; % Control equation
+        % Difference equations
+        u(k) = -K * noisy_x; % Control equation with noise
+        %u(k) = -K * x(:,k); % Control equation without noise
         x(:,k+1) = A * x(:,k) + B * u(k); % Step update
     end
 
@@ -60,4 +55,5 @@ function pole_placement_results = pole_placement(discreteStateSpace)
     pole_placement_results.time = timeVector;
     pole_placement_results.x = x(1,:);
     pole_placement_results.theta = x(3,:);
+    pole_placement_results.K = K;
 end

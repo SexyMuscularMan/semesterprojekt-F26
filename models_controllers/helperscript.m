@@ -36,12 +36,6 @@ grid on;
 % Modern control/ pole placement method
 pole_placement_results = pole_placement(classicModel);
 
-% Cascade PID
-cascade_results = sim('CascadePID.slx');
-data_cascade = cascade_results.cascade_results;
-cascade_results_time = data_cascade.time;
-cascade_results_theta = data_cascade.signals.values;
-
 % Classic PID
 classic_results = sim('classicPID.slx');
 data_classic = classic_results.classic_results;
@@ -63,6 +57,12 @@ parallel_results = sim('parallelPID.slx');
 data_parallel = parallel_results.parallel_results;
 parallel_results_time = data_parallel.time;
 parallel_results_theta = data_parallel.signals.values;
+
+% Cascade PID
+cascade_results = sim('CascadePID.slx');
+data_cascade = cascade_results.cascade_results;
+cascade_results_time = data_cascade.time;
+cascade_results_theta = data_cascade.signals.values;
 
 %% Comparing different controllers 
 % Extracting information
@@ -86,7 +86,7 @@ title('Pendulum Responses');
 legend('Pole Placement', 'Cascade PID', 'Classic PID', 'Parallel PID');
 grid on;
 
-% Plotting pendulum angle for the first 2 seconds
+% Plotting pendulum angle for the first second
 figure;
 plot(pole_placement_results.time, rad2deg(pole_placement_results.theta));
 hold on;
@@ -123,7 +123,7 @@ xlim([-1.5 1.5]);
 ylim([-1 1]);
 axis equal;
 
-% Casade PID
+% Cascade PID
 % Discrete plant transfer function
 G = tf(ss(A,B,C,D,Ts));
 z = tf('z', Ts);
@@ -156,19 +156,47 @@ ylim([-1 1]);
 axis equal;
 
 % Classic PID
-% figure;
-% rlocus(G_classic);
-% title('Root Locus plot: Classic PID');
-% grid on;
-% xlim([-1.5 1.5]);
-% ylim([-1 1]);
-% axis equal;
+% Discrete plant transfer function
+G_theta = ss(A, B, C(3,:), D(3,:), Ts);  % ONLY theta output
+G = tf(G_theta);
+z = tf('z', Ts);
+% Discrete PID transfer function from Simulink block
+Kp_classic = -9.32952485563385
+Ki_classic = -53.0199254837238
+Kd_classic = -0.386299598154963
+N_classic  = 194.847386319238
+I_term_classic = Ki_classic * Ts / (z - 1);
+D_term_classic = Kd_classic * N_classic / (1 + N_classic * Ts/(z - 1));
+C_classic = Kp_classic + I_term_classic + D_term_classic;
+% Open loop system
+G_classic = C_classic * G;
+% Plot
+figure;
+rlocus(G_classic);
+title('Root Locus plot: Classic PID');
+grid on;
+xlim([-1.5 1.5]);
+ylim([-1 1]);
+axis equal;
 
-% % Parallel PID
-% figure;
-% rlocus(G_parallel);
-% title('Root Locus plot: Parallel PID');
-% grid on;
-% xlim([-1.5 1.5]);
-% ylim([-1 1]);
-% axis equal;
+% Parallel PID
+% Discrete plant transfer function
+G_theta = ss(A, B, C(3,:), D(3,:), Ts);
+G = tf(G_theta);
+% Discrete controller transfer function
+Kp_parallel = -21.8208797167883
+Ki_parallel = -159.979890000381
+Kd_parallel = -0.598721790617152
+C_parallel = pid(Kp_parallel, Ki_parallel, Kd_parallel, 'Ts', Ts);
+% Open loop system
+G_parallel = C_parallel * G;
+% Plot
+figure;
+rlocus(G_parallel);
+title('Root Locus plot: Parallel PID');
+grid on;
+xlim([-1.5 1.5]);
+ylim([-1 1]);
+axis equal;
+
+
