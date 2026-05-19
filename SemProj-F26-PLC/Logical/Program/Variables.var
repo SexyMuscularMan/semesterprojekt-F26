@@ -10,12 +10,16 @@ VAR
 	SI_reset_last : BOOL;
 	allow_Q_drive_enable : BOOL;
 	length_calibration_steps : USINT;
+	d1 : REAL;
 	calibration_finished : BOOL;
 	centering_in_progress : BOOL;
 	pos_pendulum_absolute : DINT;
+	d2 : REAL;
 	pos_pendulum_deg : REAL;
 	pos_pendulum_rad : REAL;
 	pendulum_position_rad_last : REAL;
+	K_In : ARRAY[0..2] OF REAL := [-9.32952485563385, -53.0199254837238, -0.386299598154963];
+	K_Out : ARRAY[0..2] OF REAL := [0.033376485856261, 0.00205473985473051, 0.131363047248811];
 	pendulum_velocity_rad : REAL;
 	cart_position_last : REAL;
 	pend_vel_b : REAL;
@@ -36,6 +40,8 @@ VAR
 	eOut : ARRAY[0..2] OF REAL;
 	eIn : ARRAY[0..2] OF REAL;
 	uIn : ARRAY[0..2] OF REAL;
+	springforce : REAL;
+	controllerType : USINT;
 	uSmoothingConst : REAL;
 	xSmoothingConst : REAL;
 	thetaSmoothingConst : REAL;

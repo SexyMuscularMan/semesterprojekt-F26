@@ -1,4 +1,5 @@
 VAR
+	I_pos_pendulum_rad : REAL;
 	SI_estop_B : BOOL;
 	SI_estop_A : BOOL;
 	SI_reset_btn : BOOL;

@@ -18,7 +18,9 @@ PROGRAM _INIT
 	thetaSmoothingConst := 0.25;
 	xSmoothingConst := 0.25;
 	uSmoothingConst := 0.25;
-	i := 0;
+	i := 2;
+	controllerType := 2;
+	springforce := 0.5;
 	
 	FOR i := 0 TO 2 DO
 		eOut[i] := 0;
@@ -32,7 +34,6 @@ PROGRAM _INIT
 END_PROGRAM
 
 PROGRAM _CYCLIC
-	(* Insert code here *)
 	
 	// Handle EStop
 	IF(SI_estop_A AND SI_estop_B) THEN
@@ -61,31 +62,18 @@ PROGRAM _CYCLIC
 	
 	
 	
-	pos_cart := - I_pos_cart;
-	pos_pendulum_absolute := I_pos_pendulum;
-	WHILE(pos_pendulum_absolute > 4096 OR pos_pendulum_absolute < 0) DO
-		IF(pos_pendulum_absolute < 0) THEN
-			pos_pendulum_absolute := pos_pendulum_absolute + 4096;
-		ELSIF(pos_pendulum_absolute > 4096) THEN
-			pos_pendulum_absolute := pos_pendulum_absolute - 4096;
-		END_IF
-	END_WHILE
+	pos_cart := I_pos_cart;
+	I_pos_pendulum_rad := ((I_pos_pendulum - 2048) / 4096.0) * 2 * Pi;
+	pos_pendulum_absolute := I_pos_pendulum MOD 4096;
+	IF(pos_pendulum_absolute < 0) THEN
+		pos_pendulum_absolute := pos_pendulum_absolute + 4096;
+	END_IF
 	pos_pendulum_deg := (pos_pendulum_absolute - 2048) / 4096.0 * 360.0;
 	pos_pendulum_rad := (pos_pendulum_absolute - 2048) / 4096.0 * 2 * Pi;
-	pos_cart_mm := pos_cart / 230;
-	length_mm := length / 230;
-	
-	
+	pos_cart_mm := pos_cart / 264;
+	length_mm := length / 264;
 	cart_velocity_calculated := (pos_cart_mm - cart_position_last) / 0.01;
-	
-	pend_vel_a := (pendulum_position_rad_last - pos_pendulum_rad) / 0.01;
-	pend_vel_b := (pos_pendulum_rad - pendulum_position_rad_last) / 0.01;
-	
-	IF(pend_vel_a * pend_vel_a < pend_vel_b * pend_vel_b) THEN
-		pendulum_velocity_rad := pend_vel_a;
-	ELSE
-		pendulum_velocity_rad := pend_vel_b;
-	END_IF
+	pendulum_velocity_rad := (I_pos_pendulum_rad - pendulum_position_rad_last) / 0.01;
 	
 	x[0] := - pos_cart_mm / 1000.0 + length_mm / 2000.0;
 	x[1] := - cart_velocity_calculated / 1000.0;
@@ -123,59 +111,26 @@ PROGRAM _CYCLIC
 		Q_vel_cart := -cart_velocity;
 		Q_drive_faultreset := NOT Q_drive_faultreset;
 		length_calibration_steps := 0;
-		Swing_movement := position1;
 	END_IF
 	
 	
-	IF(swingup_complete) THEN
-		Swing_movement := position10;
-	END_IF
-		
-	CASE Swing_movement OF
-		position0:
-						
-		position1:
-			target_position :=  length / 2 + 20000;
-			IF(ABS(pos_cart - target_position) < stop_acc) THEN
-				Q_vel_cart := 0;
-				Swing_movement := position10;
-			ELSIF(pos_cart < target_position) THEN
-				Q_vel_cart := REAL_TO_INT(cart_velocity * 1.0);
-				Q_drive_faultreset := NOT Q_drive_faultreset;
-			ELSIF(pos_cart > target_position) THEN
-				Q_vel_cart := REAL_TO_INT(-cart_velocity * 1.0);
-				Q_drive_faultreset := NOT Q_drive_faultreset;
-			END_IF
-			
-		position2:
-			target_position :=  length / 2 + 40000;
-			IF(ABS(pos_cart - target_position) < stop_acc) THEN
-				Q_vel_cart := 0;
-				Swing_movement := position10;
-			ELSIF(pos_cart < target_position) THEN
-				Q_vel_cart := REAL_TO_INT(cart_velocity * 1.0);
-				Q_drive_faultreset := NOT Q_drive_faultreset;
-			ELSIF(pos_cart > target_position) THEN
-				Q_vel_cart := REAL_TO_INT(-cart_velocity * 1.0);
-				Q_drive_faultreset := NOT Q_drive_faultreset;
-			END_IF		
-			
-		position10:
+	IF(NOT swingup_complete AND length_calibration_steps = 0) THEN
+		target_position :=  length / 2;
+		IF(ABS(pos_cart - target_position) < stop_acc) THEN
+			Q_vel_cart := 0;
 			swingup_complete := TRUE;
-
-		END_CASE
+		ELSIF(pos_cart < target_position) THEN
+			Q_vel_cart := REAL_TO_INT(cart_velocity * 1.0);
+			Q_drive_faultreset := NOT Q_drive_faultreset;
+		ELSIF(pos_cart > target_position) THEN
+			Q_vel_cart := REAL_TO_INT(-cart_velocity * 1.0);
+			Q_drive_faultreset := NOT Q_drive_faultreset;
+		END_IF	
+	END_IF	
+	
 	
 	IF(swingup_complete AND NOT stopped) THEN
 			
-		
-		//u := 0;
-		//FOR i:= 0 TO 3 BY 1 DO
-		//	u := u - K[i] * x[i];
-		//END_FOR
-		
-		
-		
-		
 		eOut[2] := eOut[1];
 		eOut[1] := eOut[0];
 		eIn[2] := eIn[1];
@@ -185,7 +140,7 @@ PROGRAM _CYCLIC
 		uIn[2] := uIn[1];
 		uIn[1] := uIn[0];
 		
-		
+		(*
 		eOut[0] := - x[0];
 		uOut[0] := 1.924 * uOut[1] - 0.9235 * uOut[2] + 1.038 * eOut[0] - 2.073 * eOut[1] + 1.035 * eOut[2];
 		
@@ -197,43 +152,47 @@ PROGRAM _CYCLIC
 		END_IF
 		
 		
+		
 		theta_smoothed := thetaSmoothingConst * theta_smoothed + (1 - thetaSmoothingConst) * x[2];
 		
-		eIn[0] := uOut[0] - theta_smoothed;
-		uIn[0] := 0.0515 * uIn[1] + 0.9485 * uIn[2] - 84.6 * eIn[0] + 150.9 * eIn[1] - 66.51 * eIn[2];
+		eIn[0] := uOut[0] - x[2];
+		uIn[0] := 0.0515 * uIn[1] + 0.9485 * uIn[2] - 84.6 * eIn[0] + 150.9 * eIn[1] - 66.51 * eIn[2];*)
 		
-		IF(uIn[0] > 1.0) THEN
-			uIn[0] := 1.0;
+		eOut[0] :=  x[0];
+		d1 := (eOut[0] - eOut[1]) / 0.01;
+		uOut[0] := K_Out[0] * eOut[0] + K_Out[1] * (eOut[0] * 0.01) + K_Out[2] * d1;
+		//uOut[0] := LIMIT(-0.2, uOut[0], 0.2);
+		
+		//eIn[0] := uOut[0] - x[2];
+		eIn[0] := -x[2];
+		d2 := (eIn[0] - eIn[1]) / 0.01;
+		uIn[0] := K_In[0] * eIn[0] + K_In[1] * (eIn[0] * 0.01) + K_In[2] * d2;
+		//uIn[0] := LIMIT(-1, uIn[0], 1);
+		
+		IF(controllerType = 1) THEN
+			u := 0;
+			FOR i:= 0 TO 3 BY 1 DO
+				u := u - K[i] * x[i];
+			END_FOR
+		ELSE
+			u := uIn[0];
 		END_IF
-		IF(uIn[0] < - 1.0) THEN
-			uIn[0] := - 1.0;
-		END_IF
 		
-		
-		
-		u := uIn[0];
-		
-		//IF(x[0] < 0 AND uOut[0] > 0 OR x[0] > 0 AND uOut[0] < 0) THEN
-		//	u := uIn[0] * 0.9;
-		//ELSE
-		//	u := uIn[0] * 1.5;
-		//END_IF
-		
-		
-		IF(ABS(x[2]) < 0.4) THEN
+		IF(ABS(u) < 1) THEN
 			balancing_active := TRUE;
-		ELSIF(ABS(x[2]) >= 0.4) THEN
+		ELSIF(ABS(u) >= 10) THEN
+			Temp_checker := Temp_checker + 1;
 			balancing_active := FALSE;
-			FOR i := 0 TO 2 DO
+			(* FOR i := 0 TO 2 DO
 				eOut[i] := 0;
 				eIn[i] := 0;
 				uOut[i] := 0;
 				uIn[i] := 0;
-			END_FOR
+			END_FOR *)
 		END_IF
 		
 		IF(balancing_active) THEN
-			new_cart_velocity := REAL_TO_INT(- 12000 * u);
+			new_cart_velocity := REAL_TO_INT( - 2000 * u - 2000 * (springforce * x[0]));
 			IF(ABS(new_cart_velocity) < 20000) THEN
 				Q_vel_cart := new_cart_velocity;
 			ELSE
@@ -268,7 +227,7 @@ PROGRAM _CYCLIC
 	theta_last := x[2];
 	SI_reset_last := SI_reset_btn;
 	cart_position_last := pos_cart_mm;
-	pendulum_position_rad_last := pos_pendulum_rad;
+	pendulum_position_rad_last := I_pos_pendulum_rad;
 	
 	
 END_PROGRAM
