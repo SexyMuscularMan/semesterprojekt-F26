@@ -18,8 +18,8 @@ PROGRAM _INIT
 	thetaSmoothingConst := 0.25;
 	xSmoothingConst := 0.25;
 	uSmoothingConst := 0.25;
-	i := 2;
-	controllerType := 2;
+	i := 1;
+	controllerType := 0;
 	springforce := 0.5;
 	
 	FOR i := 0 TO 2 DO
@@ -62,7 +62,7 @@ PROGRAM _CYCLIC
 	
 	
 	
-	pos_cart := I_pos_cart;
+	pos_cart := -I_pos_cart;
 	I_pos_pendulum_rad := ((I_pos_pendulum - 2048) / 4096.0) * 2 * Pi;
 	pos_pendulum_absolute := I_pos_pendulum MOD 4096;
 	IF(pos_pendulum_absolute < 0) THEN
@@ -140,6 +140,11 @@ PROGRAM _CYCLIC
 		uIn[2] := uIn[1];
 		uIn[1] := uIn[0];
 		
+		O_I[1] := O_I[0];
+		d1_filter[1] := d1_filter[0];
+		I_I[1] := I_I[0];
+		d2_filter[1] := d2_filter[0];
+		
 		(*
 		eOut[0] := - x[0];
 		uOut[0] := 1.924 * uOut[1] - 0.9235 * uOut[2] + 1.038 * eOut[0] - 2.073 * eOut[1] + 1.035 * eOut[2];
@@ -157,42 +162,90 @@ PROGRAM _CYCLIC
 		
 		eIn[0] := uOut[0] - x[2];
 		uIn[0] := 0.0515 * uIn[1] + 0.9485 * uIn[2] - 84.6 * eIn[0] + 150.9 * eIn[1] - 66.51 * eIn[2];*)
-		
-		eOut[0] :=  x[0];
+		eOut[0] :=  -x[0];
+		O_P := K_Out[0] * eOut[0];
+		O_I[0] := O_I[1] + (K_Out[1] * (eOut[0] * 0.01));
+		O_I[0] := LIMIT(-0.2, O_I[0], 0.2);
 		d1 := (eOut[0] - eOut[1]) / 0.01;
-		uOut[0] := K_Out[0] * eOut[0] + K_Out[1] * (eOut[0] * 0.01) + K_Out[2] * d1;
-		//uOut[0] := LIMIT(-0.2, uOut[0], 0.2);
+		//d1_filter[0] := d1_filter[1] + (0.01*O_N* (d1 - d1_filter[1]));
+		O_D := K_Out[2] * d1;
+		
+		uOut[0] :=  O_P + O_I[0] + O_D;
+		uOut[0] := LIMIT(-0.2, uOut[0], 0.2);
 		
 		//eIn[0] := uOut[0] - x[2];
 		eIn[0] := -x[2];
+		I_P := K_In[0] * eIn[0];
+		I_I[0] := I_I[1] + (K_In[1] * (eIn[0] * 0.01));
+		//I_I[0] :=(K_In[1] * (eIn[0] * 0.01));
+		//I_I[0] := LIMIT(-0.2, I_I[0], 0.2);
 		d2 := (eIn[0] - eIn[1]) / 0.01;
-		uIn[0] := K_In[0] * eIn[0] + K_In[1] * (eIn[0] * 0.01) + K_In[2] * d2;
+		//d2_filter[0] := d2_filter[1] + (0.01*I_N* (d2 - d2_filter[1]));
+		I_D := K_In[2] * d2;
+		
+		uIn[0] :=  I_P + I_I[0] + I_D;
+	//	eIn[0] := -x[2];
+	//	d2 := (eIn[0] - eIn[1]) / 0.01;
+	//	uIn[0] := K_In[0] * eIn[0] + K_In[1] * (eIn[0] * 0.01) + K_In[2] * d2;
 		//uIn[0] := LIMIT(-1, uIn[0], 1);
+		
+		uP[2] := uP[1];
+		uP[1] := uP[0];
+		P_I[1] := P_I[0];
+		
+		P_P := K_P[0] * eIn[0];
+		P_I[0] := P_I[1] + (K_P[1] * eIn[0] * 0.01);
+		P_I[0] := LIMIT(-0.2, P_I[0], 0.2);
+		P_P := K_P[2]*((eIn[0] - eIn[1]) / 0.01);
+		
+		uP[0] :=  P_P + P_I[0] + P_D;
 		
 		IF(controllerType = 1) THEN
 			u := 0;
 			FOR i:= 0 TO 3 BY 1 DO
 				u := u - K[i] * x[i];
 			END_FOR
+		ELSIF(controllerType = 2) THEN
+			u := uP[0];
 		ELSE
 			u := uIn[0];
 		END_IF
 		
-		IF(ABS(u) < 1) THEN
+		IF(ABS(x[2]) < 0.4) THEN
 			balancing_active := TRUE;
-		ELSIF(ABS(u) >= 10) THEN
+		ELSIF(ABS(x[2]) >= 0.6) THEN
 			Temp_checker := Temp_checker + 1;
 			balancing_active := FALSE;
-			(* FOR i := 0 TO 2 DO
+			 FOR i := 0 TO 2 DO
 				eOut[i] := 0;
 				eIn[i] := 0;
 				uOut[i] := 0;
 				uIn[i] := 0;
-			END_FOR *)
+				I_D := 0;
+				I_P := 0;
+				I_I[0] := 0;
+				O_D := 0;
+				O_P := 0;
+				O_I[0] := 0;
+				d1_filter[i] := 0;
+				d2_filter[i] := 0;
+				d1 := 0;
+				d2 := 0;
+				P_P := 0;
+				P_I[i] := 0;
+				P_D := 0;
+				
+			END_FOR 
 		END_IF
-		
+		//- 2000 * (springforce * x[0])vs
+		counter := 10000*x[0];
 		IF(balancing_active) THEN
-			new_cart_velocity := REAL_TO_INT( - 2000 * u - 2000 * (springforce * x[0]));
+			new_cart_velocity := REAL_TO_INT( -10000 * u);
+		(*	IF(u < 0) THEN 
+				counter := counter +1;
+			ELSIF(u > 0) THEN
+				counter1 := counter1 +1;
+			END_IF*)
 			IF(ABS(new_cart_velocity) < 20000) THEN
 				Q_vel_cart := new_cart_velocity;
 			ELSE
