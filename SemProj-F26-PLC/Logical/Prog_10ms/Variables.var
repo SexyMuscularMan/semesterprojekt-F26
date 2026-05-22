@@ -1,14 +1,9 @@
-VAR CONSTANT
-	Pi : REAL := 3.1415926535;
-END_VAR
 VAR
 	temp_pendulum_pos : DINT;
 	Temp_checker : REAL;
 	length : DINT;
 	led_ton : TON;
 	cart_velocity : INT;
-	SI_reset_last : BOOL;
-	allow_Q_drive_enable : BOOL;
 	length_calibration_steps : USINT;
 	d1 : REAL;
 	calibration_finished : BOOL;
@@ -18,8 +13,8 @@ VAR
 	pos_pendulum_deg : REAL;
 	pos_pendulum_rad : REAL;
 	pendulum_position_rad_last : REAL;
-	K_In : ARRAY[0..2] OF REAL := [-9.32952485563385, -53.0199254837238, -0.386299598154963];
-	K_Out : ARRAY[0..2] OF REAL := [0.033376485856261, 0.00205473985473051, 0.131363047248811];
+	K_In : ARRAY[0..2] OF REAL := [-9.32952485563385,-53.0199254837238,-0.386299598154963];
+	K_Out : ARRAY[0..2] OF REAL := [0.033376485856261,0.00205473985473051,0.131363047248811];
 	pendulum_velocity_rad : REAL;
 	cart_position_last : REAL;
 	pend_vel_b : REAL;
@@ -46,4 +41,5 @@ VAR
 	xSmoothingConst : REAL;
 	thetaSmoothingConst : REAL;
 	uOut : ARRAY[0..2] OF REAL;
+	tempTimer : DINT;
 END_VAR

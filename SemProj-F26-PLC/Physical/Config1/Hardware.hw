@@ -33,7 +33,16 @@
       <Parameter ID="SubnetMask" Value="255.255.255.0" />
       <Parameter ID="InaNodeNumber" Value="0" />
     </Connector>
+    <Connector Name="IF3">
+      <Parameter ID="CycleTime" Value="1000" />
+    </Connector>
     <Parameter ID="ConfigurationID" Value="spro4_pendulum_Config1" />
+    <Parameter ID="SystemTick" Value="1000" />
+    <Parameter ID="TaskClassIdleTime" Value="1000" />
+    <Parameter ID="Cyclic1Duration" Value="1000" />
+    <Parameter ID="Cyclic1Tolerance" Value="1000" />
+    <Parameter ID="Cyclic2Duration" Value="10000" />
+    <Parameter ID="Cyclic2Tolerance" Value="10000" />
   </Module>
   <Module Name="X20TB12" Type="X20TB12" Version="1.0.0.0" />
   <Module Name="X20TB1F" Type="X20TB1F" Version="1.0.0.0" />

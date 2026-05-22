@@ -1,0 +1,32 @@
+VAR
+	xGlobalAvgedDiff : ARRAY[0..3] OF REAL;
+	xGlobalDiff : ARRAY[0..3] OF REAL;
+	xLocal : ARRAY[0..3] OF REAL;
+	uLocal : REAL;
+	cart_velocity_calculated : REAL;
+	pos_cart_mm : DINT;
+	pendulum_velocity_rad : REAL;
+	pos_pendulum_rad : REAL;
+	stopped : BOOL;
+	xSmoothingConst : REAL;
+	thetaSmoothingConst : REAL;
+	uSmoothingConst : REAL;
+	pos_pendulum_absolute : DINT;
+	pos_cart : DINT;
+	i : INT;
+	pos_pendulum_deg : REAL;
+	balancing_active : BOOL;
+	uLocalLast : REAL;
+	thetaLocalLast : REAL;
+	cart_position_last : REAL;
+	pendulum_position_rad_last : REAL;
+	length_mm : DINT;
+	eOut : ARRAY[0..2] OF REAL;
+	eIn : ARRAY[0..2] OF REAL;
+	uIn : ARRAY[0..2] OF REAL;
+	uOut : ARRAY[0..2] OF REAL;
+	K_In : ARRAY[0..2] OF REAL := [-9.32952485563385,-53.0199254837238,-0.386299598154963];
+	K_Out : ARRAY[0..2] OF REAL := [0.033376485856261,0.00205473985473051,0.131363047248811];
+	d1 : REAL;
+	d2 : REAL;
+END_VAR

@@ -1,11 +1,8 @@
 
 PROGRAM _INIT
-	(* Insert code here *)
 	cart_velocity := 5000;
 	Q_vel_cart := 0;
 	length := 0;
-	SI_reset_last := SI_reset_btn;
-	allow_Q_drive_enable := FALSE;
 	Q_drive_enable  := FALSE;
 	length_calibration_steps := 5;
 	calibration_finished := FALSE;
@@ -18,9 +15,10 @@ PROGRAM _INIT
 	thetaSmoothingConst := 0.25;
 	xSmoothingConst := 0.25;
 	uSmoothingConst := 0.25;
-	i := 2;
+	i := 0;
 	controllerType := 2;
 	springforce := 0.5;
+	tempTimer := 0;
 	
 	FOR i := 0 TO 2 DO
 		eOut[i] := 0;
@@ -28,7 +26,6 @@ PROGRAM _INIT
 		uOut[i] := 0;
 		uIn[i] := 0;
 	END_FOR
-	
 	
 	
 END_PROGRAM
@@ -46,9 +43,6 @@ PROGRAM _CYCLIC
 	// Handle Reset Btn
 	IF(SI_reset_btn) THEN
 		Q_drive_faultreset := NOT Q_drive_faultreset;
-		IF(NOT SI_reset_last) THEN
-			allow_Q_drive_enable := NOT allow_Q_drive_enable;
-		END_IF
 	ELSIF I_drive_no_fault THEN
 		Q_reset_LED := TRUE;
 	ELSE
@@ -70,8 +64,8 @@ PROGRAM _CYCLIC
 	END_IF
 	pos_pendulum_deg := (pos_pendulum_absolute - 2048) / 4096.0 * 360.0;
 	pos_pendulum_rad := (pos_pendulum_absolute - 2048) / 4096.0 * 2 * Pi;
-	pos_cart_mm := pos_cart / 264;
-	length_mm := length / 264;
+	pos_cart_mm := pos_cart / 240;
+	length_mm := length / 240;
 	cart_velocity_calculated := (pos_cart_mm - cart_position_last) / 0.01;
 	pendulum_velocity_rad := (I_pos_pendulum_rad - pendulum_position_rad_last) / 0.01;
 	
@@ -79,6 +73,8 @@ PROGRAM _CYCLIC
 	x[1] := - cart_velocity_calculated / 1000.0;
 	x[2] := pos_pendulum_rad;
 	x[3] := pendulum_velocity_rad;
+	
+	
 	
 	
 	IF(length_calibration_steps = 5) THEN
@@ -93,7 +89,12 @@ PROGRAM _CYCLIC
 		IF (NOT I_endstop_negative) THEN
 			Q_vel_cart := 0;
 			reset_cart_position := TRUE;
-			length_calibration_steps := 3;
+			
+			tempTimer := tempTimer + 1;
+			
+			IF(tempTimer > 500) THEN
+				length_calibration_steps := 3;
+			END_IF
 		END_IF
 	ELSIF(length_calibration_steps = 3) THEN
 		reset_cart_position := FALSE;
@@ -112,7 +113,7 @@ PROGRAM _CYCLIC
 		Q_drive_faultreset := NOT Q_drive_faultreset;
 		length_calibration_steps := 0;
 	END_IF
-	
+	 
 	
 	IF(NOT swingup_complete AND length_calibration_steps = 0) THEN
 		target_position :=  length / 2;
@@ -225,7 +226,6 @@ PROGRAM _CYCLIC
 	
 	u_last := u;
 	theta_last := x[2];
-	SI_reset_last := SI_reset_btn;
 	cart_position_last := pos_cart_mm;
 	pendulum_position_rad_last := I_pos_pendulum_rad;
 	

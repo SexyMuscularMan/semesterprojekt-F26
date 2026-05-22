@@ -20,11 +20,15 @@ VAR
 	B : ARRAY[0..3] OF REAL := [0.001859,0.366,-0.007782,-1.531];
 	K : ARRAY[0..3] OF REAL := [-9.97788845498053,-4.33797239803683,-8.31962221505295,-1.27391028745717];
 	u : REAL;
-	x : ARRAY[0..3] OF REAL;
+	xGlobal : ARRAY[0..3] OF REAL;
 	x_out : ARRAY[0..3] OF REAL;
 	theta_smoothed : REAL;
 	x_smoothed : REAL;
 	theta_last : REAL;
 	u_smoothed : REAL;
 	u_last : REAL;
+	Pi : REAL := 3.1415926535;
+	length : DINT;
+	xGlobalAvged : ARRAY[0..3] OF REAL;
+	x : ARRAY[0..3] OF REAL;
 END_VAR
