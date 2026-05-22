@@ -7,7 +7,7 @@ TYPE
 		Swingup_Complete,
 		Start_Swingup
 		);
-	Pendulum_State : 
+	System_State : 
 		(
 		Stopped,
 		Balancing,

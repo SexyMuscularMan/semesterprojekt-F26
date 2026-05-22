@@ -35,9 +35,6 @@ PROGRAM _CYCLIC
 	xLocal[3] := pendulum_velocity_rad;
 	
 	
-	
-	
-	
 	IF(NOT stopped) THEN
 		eOut[2] := eOut[1];
 		eOut[1] := eOut[0];

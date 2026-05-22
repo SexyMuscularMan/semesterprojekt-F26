@@ -4,17 +4,11 @@ PROGRAM _INIT
 	SystemState := Calibrating;
 	CalibrationState := Start_Calibration;
 	SwingupState := Start_Swingup;
-	BalancingState := Classic10ms;
+	BalancingState := Cascade10ms;
+	swingupOnReset := FALSE;
+	smoothingConst := 0.99;
 	iterationCounter := 0;
 	i := 1;
-	
-	(*
-	xSmoothingConst := 0.25;
-	uSmoothingConst := 0.25;
-	thetaSmoothingConst := 0.25;
-	controllerType := 2;
-	springforce := 0.5;
-	*)		
 END_PROGRAM
 
 PROGRAM _CYCLIC
@@ -52,16 +46,40 @@ PROGRAM _CYCLIC
 	pendulumVel := (I_pos_pendulum - pendulumPosLast[9]) / 4096.0 * 1000.0 / 10;
 	pendulumVelRad := pendulumVel * 2 * Pi;
 	
+	
 	data[0] := (cartPosMm - lengthMm / 2) / 1000.0;
 	data[1] := cartVelCalculated / 1000.0;
 	data[2] := pendulumPosRad;
 	data[3] := pendulumVelRad;
+	
+	dataSmoothed[0] := data[0];
+	dataSmoothed[1] := smoothingConst * dataSmoothed[1] + (1 - smoothingConst) * data[1];
+	dataSmoothed[2] := data[2];
+	dataSmoothed[3] := smoothingConst * dataSmoothed[3] + (1 - smoothingConst) * data[3];
+	
+	FOR i := 0 TO 8 DO
+		FOR j := 0 TO 3 DO
+			dataBacklog[9 - i, j] := dataBacklog[8 - i, j];
+		END_FOR
+	END_FOR
+	FOR j := 0 TO 3 DO
+		dataBacklog[0, j] := data[j];
+	END_FOR
+	FOR i := 0 TO 3 DO
+		data10ms[i] := 0;
+		FOR j := 0 TO 9 DO
+			data10ms[i] := data10ms[i] + dataBacklog[j, i];
+		END_FOR
+		data10ms[i] := data10ms[i] / 10;
+	END_FOR
+	
 	FOR i := 0 TO 3 DO
 		xGlobal[i] := data[i];
 	END_FOR
 	
+	
 	IF(SystemState <> Calibrating) THEN
-		IF(data[3] > 15 OR cartPosMm < 100 OR lengthMm - cartPosMm < 100) THEN
+		IF(data[3] > 20 OR cartPosMm < 100 OR lengthMm - cartPosMm < 100) THEN
 			Q_vel_cart := 0;
 			SystemState := Reset;
 		ELSIF(NOT I_endstop_negative OR NOT I_endstop_positive) THEN
@@ -70,11 +88,10 @@ PROGRAM _CYCLIC
 		END_IF
 	END_IF
 	
+	
 	CASE SystemState OF
 		Calibrating: 
-			
-			IF(iterationCounter MOD 2 = 0 AND iterationCounter > 5000) THEN
-				
+			IF(iterationCounter MOD 2 = 0) THEN
 				CASE CalibrationState OF
 					Start_Calibration: 
 						reset_pendulum_position := TRUE;
@@ -115,6 +132,7 @@ PROGRAM _CYCLIC
 						END_IF
 												
 					Calibration_Complete:
+						SwingupState := Swingup_Center;
 						SystemState := Swingup;
 						
 					ELSE
@@ -141,15 +159,15 @@ PROGRAM _CYCLIC
 					END_IF
 					
 				Accelerate:
-					IF(data[2] > Pi / 2 AND data[3] > 0 AND data[0] < 0.2) THEN
+					IF(data[2] > Pi / 2 AND data[3] > 0 AND data[0] < 0.5) THEN
 						Q_vel_cart := 5000;
-					ELSIF(data[2] < - Pi / 2 AND data[3] < 0 AND data[0] > - 0.2) THEN
+					ELSIF(data[2] < - Pi / 2 AND data[3] < 0 AND data[0] > - 0.5) THEN
 						Q_vel_cart := - 5000;
 					ELSE
 						Q_vel_cart := 0;
 					END_IF
 					
-					IF(ABS(data[2]) < 0.2) THEN
+					IF(ABS(data[2]) < 0.5 AND ABS(data[3]) > 1) THEN
 						Q_vel_cart := 0;
 						SwingupState := Swingup_Complete;
 						SystemState := Balancing;
@@ -165,95 +183,94 @@ PROGRAM _CYCLIC
 			
 			
 		Balancing:
-			FOR i := 0 TO 8 DO
-				FOR j := 0 TO 3 DO
-					dataBacklog[9 - i, j] := dataBacklog[8 - i, j];
-				END_FOR
-			END_FOR
-			FOR j := 0 TO 3 DO
-				dataBacklog[0, j] := data[j];
-			END_FOR
-			
-			viableBacklog := 0;
-			FOR i := 1 TO 9 DO
-				IF(dataBacklog[0, 2] * dataBacklog[i, 2] > 0) THEN
-					viableBacklog := i;
-				ELSE
-					i := 9;
-				END_IF
-			END_FOR
-			
-			FOR i := 0 TO 3 DO
-				data10ms[i] := 0;
-				FOR j := 0 TO viableBacklog DO
-					data10ms[i] := data10ms[i] + dataBacklog[j, i];
-				END_FOR
-				data10ms[i] := data10ms[i] / 10;
-			END_FOR
-			
-			FOR i := 0 TO 3 DO
-				xGlobalAvged[i] := data10ms[i];
-			END_FOR
-			
-			
-			
-			
-			
-			
 			u := 0;
-			FOR i:= 0 TO 1 DO
-				u := u + K[i] * data[i];
-			END_FOR
-			FOR i:= 2 TO 3 DO
-				u := u - K[i] * data[i];
-			END_FOR
-			
-			IF(iterationCounter MOD 10 = 0) THEN
-				IF(ABS(u) < 1) THEN
-					balancingActive := TRUE;
-				ELSIF(ABS(u) >= 10) THEN
-					balancingActive := FALSE;
-				END_IF
-				
-				IF(balancingActive) THEN
-					newCartVelocity := REAL_TO_INT( - 10000 * u);
-					IF(ABS(newCartVelocity) < 20000) THEN
-						Q_vel_cart := newCartVelocity;
-					ELSE
-						IF(newCartVelocity < 0) THEN
-							Q_vel_cart := -20000;
-						ELSE
-							Q_vel_cart := 20000;
-						END_IF
+			CASE BalancingState OF
+				PolePlacement10ms: 
+					FOR i:= 0 TO 1 DO
+						u := u + pp10msK[i] * data10ms[i];
+					END_FOR
+					FOR i:= 2 TO 3 DO
+						u := u - pp10msK[i] * data10ms[i];
+					END_FOR
+					newCartVelocity := REAL_TO_INT(- 10000 * u);
+					
+					IF(ABS(u) < 1 AND data[3] < 5 AND ABS(data[2]) < 1) THEN
+						balancingActive := TRUE;
+					ELSIF(ABS(u) >= 10 OR data[3] > 15) THEN
+						balancingActive := FALSE;
 					END_IF
+					
+				PolePlacement1ms:
+					FOR i:= 0 TO 3 DO
+						u := u - pp1msKTemp[i] * dataSmoothed[i];
+					END_FOR
+					newCartVelocity := REAL_TO_INT(1600 * u);
+					
+					IF(ABS(u) < 15 AND data[3] < 10 AND ABS(data[2]) < 1) THEN
+						balancingActive := TRUE;
+					ELSIF(ABS(u) >= 50 OR data[3] > 15) THEN
+						balancingActive := FALSE;
+					END_IF
+					
+				Cascade10ms:
+					pidOutError := - data[0];		
+					pidOutIntegration := pidOutIntegration + pidOutError * 0.001;
+					pidOutDerivative := dataSmoothed[1];
+					uOut := cpid10msK[0, 0] * pidOutError + cpid10msK[0, 1] * pidOutIntegration + cpid10msK[0, 2] * pidOutDerivative;
+					
+					IF(ABS(uOut) > 0.2) THEN
+						uOut := 0.2 * uOut / ABS(uOut);
+					END_IF
+					
+					pidInError := uOut - data[2];		
+					pidInIntegration := pidInIntegration + pidInError * 0.001;
+					pidInDerivative := dataSmoothed[3];
+					uIn := cpid10msK[1, 0] * pidInError + cpid10msK[1, 1] * pidInIntegration + cpid10msK[1, 2] * pidInDerivative;
+					
+					IF(ABS(uIn) > 1.0) THEN
+						uIn := 1.0 * uIn / ABS(uIn);
+					END_IF
+					u := uIn;
+					newCartVelocity := REAL_TO_INT(- 2000 * u);
+					
+					IF(ABS(u) < 1 AND data[3] < 5 AND ABS(data[2]) < 1) THEN
+						balancingActive := TRUE;
+					ELSIF(ABS(u) >= 10 OR data[3] > 15) THEN
+						balancingActive := FALSE;
+					END_IF
+					
 				ELSE
-					Q_vel_cart := 0;
+					balancingStateFailure := TRUE;
+					
+			END_CASE
+			
+			IF(balancingActive) THEN
+				IF(ABS(newCartVelocity) < 20000) THEN
+					Q_vel_cart := newCartVelocity;
+				ELSE
+					Q_vel_cart := 20000 * newCartVelocity / ABS(newCartVelocity);
 				END_IF
+			ELSE
+				Q_vel_cart := 0;
 			END_IF
 			
-			
-			
-			
-			
-			systemStateFailure := TRUE;
-			
-		
+					
 		Reset:
-			systemStateFailure := TRUE;
+			IF(swingupOnReset) THEN
+				SwingupState := Swingup_Center;
+				SystemState := Swingup;
+			END_IF
 			
 		Stopped:
-			systemStateFailure := TRUE;
+			IF(SI_reset_btn) THEN
+				CalibrationState := Start_Calibration;
+				SystemState := Calibrating;
+			END_IF
 			
 		ELSE
 			systemStateFailure := TRUE;
 		
 	END_CASE
-	
-	
-	
-	
-	
-	
 	
 	
 	cartPosLast := cartPos;

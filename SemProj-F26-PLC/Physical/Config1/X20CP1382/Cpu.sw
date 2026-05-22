@@ -4,9 +4,7 @@
   <TaskClass Name="Cyclic#1">
     <Task Name="Prog_1ms" Source="Prog_1ms.prg" Memory="UserROM" Language="IEC" Debugging="true" />
   </TaskClass>
-  <TaskClass Name="Cyclic#2">
-    <Task Name="Obs_10ms" Source="Obs_10ms.prg" Memory="UserROM" Language="IEC" Debugging="true" />
-  </TaskClass>
+  <TaskClass Name="Cyclic#2" />
   <TaskClass Name="Cyclic#3" />
   <TaskClass Name="Cyclic#4" />
   <TaskClass Name="Cyclic#5" />

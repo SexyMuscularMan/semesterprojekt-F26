@@ -1,5 +1,5 @@
 VAR
-	SystemState : Pendulum_State;
+	SystemState : System_State;
 	CalibrationState : Calibration_State;
 	SwingupState : Swingup_State;
 	BalancingState : Balancing_State;
@@ -7,10 +7,10 @@ VAR
 	calibrationStateFailure : BOOL := FALSE;
 	swingupStateFailure : BOOL := FALSE;
 	balancingStateFailure : BOOL := FALSE;
+	swingupOnReset : BOOL;
 	i : INT;
 	j : INT;
 	cartVelocity : INT := 5000;
-	lengthLocal : DINT;
 	stopAcc : INT := 400;
 	led_ton : TON;
 	lengthMm : DINT;
@@ -22,16 +22,25 @@ VAR
 	pendulumVel : REAL;
 	pendulumVelRad : REAL;
 	data : ARRAY[0..3] OF REAL;
+	dataSmoothed : ARRAY[0..3] OF REAL := [4(0)];
+	data10ms : ARRAY[0..3] OF REAL;
+	dataBacklog : ARRAY[0..9,0..3] OF REAL;
 	cartPosLast : DINT;
 	pendulumPosLast : ARRAY[0..9] OF DINT;
 	errorString : STRING[80];
 	iterationCounter : DINT;
-	swingupPolarity : SINT;
-	swingupVel : INT;
-	pendulumPolarity : SINT;
-	dataBacklog : ARRAY[0..9,0..3] OF REAL;
-	data10ms : ARRAY[0..3] OF REAL;
 	balancingActive : BOOL;
 	newCartVelocity : INT;
-	viableBacklog : INT;
+	smoothingConst : REAL;
+	uOut : REAL;
+	uIn : REAL;
+	pp10msK : ARRAY[0..3] OF REAL := [-9.97788845498053,-4.33797239803683,-8.31962221505295,-1.27391028745717];
+	pp1msKTemp : ARRAY[0..3] OF REAL := [-28.1045,-29.5079,72.0365,9.3493];
+	cpid10msK : ARRAY[0..1,0..2] OF REAL := [0.033376485856261,0.00205473985473051,0.131363047248811,-9.32952485563385,-53.0199254837238,-0.386299598154963];
+	pidOutError : REAL;
+	pidInError : REAL;
+	pidOutIntegration : REAL;
+	pidInIntegration : REAL;
+	pidOutDerivative : REAL;
+	pidInDerivative : REAL;
 END_VAR
