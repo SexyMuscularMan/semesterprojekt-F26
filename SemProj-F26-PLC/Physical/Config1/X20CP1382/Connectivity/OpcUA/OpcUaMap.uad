@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?AutomationStudio FileVersion="4.9"?>
+<OpcUaSource FileVersion="9" ArVersion="H4.83">
+  <Aliases>
+    <ACLAliases />
+    <EURangeViolationAliases />
+    <EURangesAliases />
+    <EngineeringUnitAliases />
+  </Aliases>
+  <DefaultView>
+    <Module Name="&lt;Default&gt;">
+      <GlobalVariables Name="Global Variables">
+        <Variable Name="u" />
+      </GlobalVariables>
+      <Task Name="Prog_1ms">
+        <Variable Name="data" />
+        <Variable Name="iterationCounter" />
+      </Task>
+    </Module>
+  </DefaultView>
+</OpcUaSource>

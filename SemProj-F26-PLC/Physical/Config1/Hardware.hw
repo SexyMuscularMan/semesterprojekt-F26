@@ -43,6 +43,9 @@
     <Parameter ID="Cyclic1Tolerance" Value="1000" />
     <Parameter ID="Cyclic2Duration" Value="10000" />
     <Parameter ID="Cyclic2Tolerance" Value="10000" />
+    <Parameter ID="ActivateOpcUa" Value="1" />
+    <Parameter ID="OpcUaPort" Value="4841" />
+    <Parameter ID="OpcUaInformationModels_PV_Version" Value="1" />
   </Module>
   <Module Name="X20TB12" Type="X20TB12" Version="1.0.0.0" />
   <Module Name="X20TB1F" Type="X20TB1F" Version="1.0.0.0" />

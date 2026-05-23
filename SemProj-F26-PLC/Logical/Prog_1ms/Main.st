@@ -3,12 +3,12 @@ PROGRAM _INIT
 	Q_vel_cart := 0;
 	SystemState := Calibrating;
 	CalibrationState := Start_Calibration;
-	SwingupState := Start_Swingup;
+	SwingupState := Swingup_Complete;
 	BalancingState := Cascade10ms;
 	swingupOnReset := FALSE;
 	smoothingConst := 0.99;
 	iterationCounter := 0;
-	i := 1;
+	i := 0;
 END_PROGRAM
 
 PROGRAM _CYCLIC
@@ -132,7 +132,6 @@ PROGRAM _CYCLIC
 						END_IF
 												
 					Calibration_Complete:
-						SwingupState := Swingup_Center;
 						SystemState := Swingup;
 						
 					ELSE
@@ -167,7 +166,7 @@ PROGRAM _CYCLIC
 						Q_vel_cart := 0;
 					END_IF
 					
-					IF(ABS(data[2]) < 0.5 AND ABS(data[3]) > 1) THEN
+					IF(ABS(data[2]) < 0.5 AND ABS(data[3]) > 2) THEN
 						Q_vel_cart := 0;
 						SwingupState := Swingup_Complete;
 						SystemState := Balancing;
@@ -183,9 +182,9 @@ PROGRAM _CYCLIC
 			
 			
 		Balancing:
-			u := 0;
 			CASE BalancingState OF
 				PolePlacement10ms: 
+					u := 0;
 					FOR i:= 0 TO 1 DO
 						u := u + pp10msK[i] * data10ms[i];
 					END_FOR
@@ -201,6 +200,7 @@ PROGRAM _CYCLIC
 					END_IF
 					
 				PolePlacement1ms:
+					u := 0;
 					FOR i:= 0 TO 3 DO
 						u := u - pp1msKTemp[i] * dataSmoothed[i];
 					END_FOR
@@ -213,32 +213,31 @@ PROGRAM _CYCLIC
 					END_IF
 					
 				Cascade10ms:
-					pidOutError := - data[0];		
-					pidOutIntegration := pidOutIntegration + pidOutError * 0.001;
-					pidOutDerivative := dataSmoothed[1];
-					uOut := cpid10msK[0, 0] * pidOutError + cpid10msK[0, 1] * pidOutIntegration + cpid10msK[0, 2] * pidOutDerivative;
-					
+					pidOutError := data[0];
+					pidOutIntegration := pidOutIntegration + cpid10msK[0, 1] * pidOutError * 0.001;
+					pidOutIntegration := LIMIT(- 1, pidOutIntegration, 1);
+					pidOutDerivative := dataSmoothed[1] * cpid10msK[0, 2];
+					uOut := pidOutError * cpid10msK[0, 0] + pidOutIntegration + pidOutDerivative;
+						
 					IF(ABS(uOut) > 0.2) THEN
 						uOut := 0.2 * uOut / ABS(uOut);
 					END_IF
 					
-					pidInError := uOut - data[2];		
-					pidInIntegration := pidInIntegration + pidInError * 0.001;
-					pidInDerivative := dataSmoothed[3];
-					uIn := cpid10msK[1, 0] * pidInError + cpid10msK[1, 1] * pidInIntegration + cpid10msK[1, 2] * pidInDerivative;
-					
-					IF(ABS(uIn) > 1.0) THEN
-						uIn := 1.0 * uIn / ABS(uIn);
-					END_IF
+					pidInError := (uOut - data[2]);
+					pidInIntegration := pidInIntegration + cpid10msK[1, 1] * pidInError * 0.001;
+					pidInIntegration := LIMIT(- 1, pidInIntegration, 1);
+					pidInDerivative := - data[3] * cpid10msK[1, 2];
+					uIn := pidInError * cpid10msK[1, 0] + pidInIntegration + pidInDerivative;
 					u := uIn;
-					newCartVelocity := REAL_TO_INT(- 2000 * u);
+					
+					newCartVelocity := REAL_TO_INT(- 10000 * u);
 					
 					IF(ABS(u) < 1 AND data[3] < 5 AND ABS(data[2]) < 1) THEN
 						balancingActive := TRUE;
 					ELSIF(ABS(u) >= 10 OR data[3] > 15) THEN
 						balancingActive := FALSE;
 					END_IF
-					
+						
 				ELSE
 					balancingStateFailure := TRUE;
 					
